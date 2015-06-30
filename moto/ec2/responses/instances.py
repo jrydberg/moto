@@ -269,7 +269,7 @@ EC2_RUN_INSTANCES = """<RunInstancesResponse xmlns="http://ec2.amazonaws.com/doc
                   <attachmentId>{{ nic.attachment_id }}</attachmentId>
                   <deviceIndex>{{ nic.device_index }}</deviceIndex>
                   <status>attached</status>
-                  <attachTime>YYYY-MM-DDTHH:MM:SS+0000</attachTime>
+                  <attachTime>2000-01-01T00:00:00+0000</attachTime>
                   <deleteOnTermination>true</deleteOnTermination>
                 </attachment>
                 {% if nic.public_ip %}
@@ -374,7 +374,7 @@ EC2_DESCRIBE_INSTANCES = """<DescribeInstancesResponse xmlns='http://ec2.amazona
                           <ebs>
                             <volumeId>{{ instance.block_device_mapping['/dev/sda1'].volume_id }}</volumeId>
                             <status>attached</status>
-                            <attachTime>YYYY-MM-DDTHH:MM:SS.SSSZ</attachTime>
+                            <attachTime>2000-01-01T00:00:00+0000</attachTime>
                             <deleteOnTermination>true</deleteOnTermination>
                         </ebs>
                       </item>
@@ -418,7 +418,7 @@ EC2_DESCRIBE_INSTANCES = """<DescribeInstancesResponse xmlns='http://ec2.amazona
                             <attachmentId>{{ nic.attachment_id }}</attachmentId>
                             <deviceIndex>{{ nic.device_index }}</deviceIndex>
                             <status>attached</status>
-                            <attachTime>YYYY-MM-DDTHH:MM:SS+0000</attachTime>
+                            <attachTime>2000-01-01T00:00:00+0000</attachTime>
                             <deleteOnTermination>true</deleteOnTermination>
                           </attachment>
                           {% if nic.public_ip %}
