@@ -36,6 +36,9 @@ class Database(object):
         self.source_db_identifier = kwargs.get("source_db_identifier")
         self.db_instance_class = kwargs.get('db_instance_class')
         self.port = kwargs.get('port')
+        if self.port is None:
+            if self.engine == 'MySQL':
+                self.port = 3306
         self.db_instance_identifier = kwargs.get('db_instance_identifier')
         self.db_name = kwargs.get("db_name")
         self.publicly_accessible = kwargs.get("publicly_accessible")
