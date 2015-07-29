@@ -186,9 +186,11 @@ class ELBResponse(BaseResponse):
         return template.render(instance_ids=instance_ids)
 
 
-CREATE_LOAD_BALANCER_TEMPLATE = """<CreateLoadBalancerResult xmlns="http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/">
+CREATE_LOAD_BALANCER_TEMPLATE = """<CreateLoadBalancerResponse xmlns="http://elasticloadbalancing.amazonaws.com/doc/2012-06-01/">
+  <CreateLoadBalancerResult>
     <DNSName>tests.us-east-1.elb.amazonaws.com</DNSName>
-</CreateLoadBalancerResult>"""
+  </CreateLoadBalancerResult>
+</CreateLoadBalancerResponse>"""
 
 CREATE_LOAD_BALANCER_LISTENERS_TEMPLATE = """<CreateLoadBalancerListenersResponse xmlns="http://elasticloadbalancing.amazon aws.com/doc/2012-06-01/">
   <CreateLoadBalancerListenersResult/>
