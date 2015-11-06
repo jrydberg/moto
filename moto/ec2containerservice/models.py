@@ -39,6 +39,31 @@ class FakeTask(object):
         self.containerInstance.tasks.append(self)
 
 
+class Deployment(object):
+
+    def __init__(self):
+        self.created_at = 1432829320.611
+        self.updated_at = 1432829320.611
+        self.desired_count = 0
+        self.id = "ecs-svc/9223370604025455196"
+        self.pending_count = 0
+        self.running_count = 0
+        self.status = "PRIMARY"
+        self.task_definition_arn = "arn:aws:ecs:us-west-2:012345678910:task-definition/hpcc-t2-medium:1"
+
+    def to_json(self):
+        return {
+            "createdAt": self.created_at,
+            "desiredCount": self.desired_count,
+            "id": self.id,
+            "pendingCount": self.pending_count,
+            "runningCount": self.running_count,
+            "status": self.status,
+            "taskDefinition": self.task_definition_arn,
+            "updatedAt": self.updated_at,
+        }
+
+
 class FakeService(object):
 
     def __init__(self, cluster, serviceName):
@@ -47,6 +72,7 @@ class FakeService(object):
         self.taskDefinition = None
         self.desiredCount = 0
         self.serviceArn = "arn:aws:ecs:us-east-1:012345678910:service/{}".format(serviceName)
+        self.deployments = [Deployment()]
 
     def update(self, taskDefinition, desiredCount):
         if taskDefinition is not None:
@@ -75,14 +101,14 @@ class FakeService(object):
             "clusterArn": self.cluster.clusterArn,
             "desiredCount": self.desiredCount,
             "loadBalancers": [],
-            "deployments": [],
+            "deployments": [d.to_json() for d in self.deployments],
             "events": [],
             "runningCount": 0,
             "pendingCount": 0,
             "serviceName": self.serviceName,
             "serviceArn": self.serviceArn,
             "status": "ACTIVE",
-            "taskDefintion": self.taskDefinition.arn
+            "taskDefinition": self.taskDefinition.arn
         }
 
 
