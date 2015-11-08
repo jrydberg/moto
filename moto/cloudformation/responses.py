@@ -52,7 +52,11 @@ class CloudFormationResponse(BaseResponse):
                 }
             }
         }
-        return json.dumps(stack_body)
+
+        template = self.response_template(CREATE_STACK_TEMPLATE)
+        return template.render(stack=stack)
+
+        # return json.dumps(stack_body)
 
     def describe_stacks(self):
         stack_name_or_id = None
@@ -109,14 +113,31 @@ class CloudFormationResponse(BaseResponse):
         })
 
 
-DESCRIBE_STACKS_TEMPLATE = """<DescribeStacksResult>
+CREATE_STACK_TEMPLATE = """<CreateStackResponse xmlns="http://cloudformation.amazonaws.com/doc/2010-05-15/">
+  <CreateStackResult>
+    <StackId>{{stack.stack_id}}</StackId>
+
+
+    </CreateStackResult>
+  <ResponseMetadata>
+    <RequestId>b9b4b068-3a41-11e5-94eb-example</RequestId>
+  </ResponseMetadata>
+</CreateStackResponse>"""
+
+
+DESCRIBE_STACKS_TEMPLATE = """<DescribeStacksResponse xmlns="http://cloudformation.amazonaws.com/doc/2010-05-15/">
+<DescribeStacksResult>
   <Stacks>
     {% for stack in stacks %}
     <member>
       <StackName>{{ stack.name }}</StackName>
       <StackId>{{ stack.stack_id }}</StackId>
       <CreationTime>2010-07-27T22:28:28Z</CreationTime>
+      <LastUpdateTime>2010-07-27T22:28:28Z</LastUpdateTime>
       <StackStatus>{{ stack.status }}</StackStatus>
+      {% if stack.description %}
+      <Description>{{ stack.description}}</Description>
+      {% endif %}
       {% if stack.notification_arns %}
       <NotificationARNs>
         {% for notification_arn in stack.notification_arns %}
@@ -146,7 +167,11 @@ DESCRIBE_STACKS_TEMPLATE = """<DescribeStacksResult>
     </member>
     {% endfor %}
   </Stacks>
-</DescribeStacksResult>"""
+</DescribeStacksResult>
+  <ResponseMetadata>
+    <RequestId>b9b4b068-3a41-11e5-94eb-example</RequestId>
+  </ResponseMetadata>
+</DescribeStacksResponse>"""
 
 
 LIST_STACKS_RESPONSE = """<ListStacksResponse>

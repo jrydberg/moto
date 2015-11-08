@@ -9,8 +9,10 @@ from moto.elb import models as elb_models
 from moto.iam import models as iam_models
 from moto.rds import models as rds_models
 from moto.route53 import models as route53_models
+from moto.s3 import models as s3_models
 from moto.sns import models as sns_models
 from moto.sqs import models as sqs_models
+from moto.ec2containerservice import models as ecs_models
 from .utils import random_suffix
 from .exceptions import MissingParameterError, UnformattedGetAttTemplateException
 from boto.cloudformation.stack import Output
@@ -34,6 +36,7 @@ MODEL_MAP = {
     "AWS::EC2::VPC": ec2_models.VPC,
     "AWS::EC2::VPCGatewayAttachment": ec2_models.VPCGatewayAttachment,
     "AWS::EC2::VPCPeeringConnection": ec2_models.VPCPeeringConnection,
+    "AWS::ECS::Cluster": ecs_models.FakeCluster,
     "AWS::ElasticLoadBalancing::LoadBalancer": elb_models.FakeLoadBalancer,
     "AWS::IAM::InstanceProfile": iam_models.InstanceProfile,
     "AWS::IAM::Role": iam_models.Role,
@@ -44,6 +47,7 @@ MODEL_MAP = {
     "AWS::Route53::HostedZone": route53_models.FakeZone,
     "AWS::Route53::RecordSet": route53_models.RecordSet,
     "AWS::Route53::RecordSetGroup": route53_models.RecordSetGroup,
+    "AWS::S3::Bucket": s3_models.FakeBucket,
     "AWS::SNS::Topic": sns_models.Topic,
     "AWS::SQS::Queue": sqs_models.Queue,
 }

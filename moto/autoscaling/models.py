@@ -119,7 +119,7 @@ class FakeAutoScalingGroup(object):
         self.vpc_zone_identifier = vpc_zone_identifier
 
         self.default_cooldown = default_cooldown if default_cooldown else DEFAULT_COOLDOWN
-        self.health_check_period = health_check_period
+        self.health_check_period = health_check_period or 0
         self.health_check_type = health_check_type if health_check_type else "EC2"
         self.load_balancers = load_balancers
         self.placement_group = placement_group

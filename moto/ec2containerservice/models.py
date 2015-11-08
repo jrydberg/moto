@@ -27,7 +27,8 @@ class FakeTask(object):
             "lastStatus": self.lastStatus,
             "overrides": self.overrides,
             "taskArn": self.taskArn,
-            "taskDefinitionArn": self.taskDefinition.arn
+            "taskDefinitionArn": self.taskDefinition.arn,
+            "startedBy": self.startedBy,
         }
         if self.containerInstance:
             result['containerInstanceArn'] = self.containerInstance.containerInstanceArn
@@ -185,6 +186,14 @@ class FakeCluster(object):
         self.services = []
         self.tasks = []
         self.instances = []
+
+    def __str__(self):
+        return self.clusterName
+
+    @classmethod
+    def create_from_cloudformation_json(cls, resource_name, cloudformation_json, region_name):
+        backend = ec2containerservice_backends[region_name]
+        return backend.create_cluster(resource_name)
 
     def register_container_instance(self, instance):
         """Register a EC2 instance in the cluster.

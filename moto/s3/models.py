@@ -170,6 +170,9 @@ class FakeBucket(object):
         self.multiparts = {}
         self.versioning_status = None
 
+    def __str__(self):
+        return self.name
+
     @property
     def location(self):
         return self.region_name
@@ -185,6 +188,10 @@ class FakeBucket(object):
         elif attribute_name == 'WebsiteURL':
             raise NotImplementedError('"Fn::GetAtt" : [ "{0}" , "WebsiteURL" ]"')
         raise UnformattedGetAttTemplateException()
+
+    @classmethod
+    def create_from_cloudformation_json(cls, resource_name, cloudformation_json, region_name):
+        return s3_backend.create_bucket(resource_name, region_name)
 
 
 class S3Backend(BaseBackend):
