@@ -106,11 +106,8 @@ class CloudFormationResponse(BaseResponse):
         name_or_stack_id = self.querystring.get('StackName')[0]
 
         self.cloudformation_backend.delete_stack(name_or_stack_id)
-        return json.dumps({
-            'DeleteStackResponse': {
-                'DeleteStackResult': {},
-            }
-        })
+        template = self.response_template(DELETE_STACK_TEMPLATE)
+        return template.render()
 
 
 CREATE_STACK_TEMPLATE = """<CreateStackResponse xmlns="http://cloudformation.amazonaws.com/doc/2010-05-15/">
@@ -123,6 +120,13 @@ CREATE_STACK_TEMPLATE = """<CreateStackResponse xmlns="http://cloudformation.ama
     <RequestId>b9b4b068-3a41-11e5-94eb-example</RequestId>
   </ResponseMetadata>
 </CreateStackResponse>"""
+
+
+DELETE_STACK_TEMPLATE = """<DeleteStackResponse xmlns="http://cloudformation.amazonaws.com/doc/2010-05-15/">
+  <ResponseMetadata>
+    <RequestId>5ccc7dcd-744c-11e5-be70-example</RequestId>
+  </ResponseMetadata>
+</DeleteStackResponse>"""
 
 
 DESCRIBE_STACKS_TEMPLATE = """<DescribeStacksResponse xmlns="http://cloudformation.amazonaws.com/doc/2010-05-15/">
