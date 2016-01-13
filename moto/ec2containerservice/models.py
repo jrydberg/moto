@@ -1,9 +1,44 @@
 from __future__ import unicode_literals
 
 import uuid
+import time
 
 import boto.ec2containerservice
 from moto.core import BaseBackend
+
+
+class _Container(object):
+    """A Docker container that is part of a task."""
+
+    def __init__(self, task, name):
+        self.task = task
+        self.name = name
+        self.lastStatus = 'RUNNING'
+        self.reason = None
+        self.exitCode = None
+        self.containerArn = "arn:aws:ecs:us-east-1:012345678910:container/{}".format(str(uuid.uuid4()))
+
+    def to_json(self):
+        result = {
+            "containerArn": self.containerArn,
+            "lastStatus": self.lastStatus,
+            "name": self.name,
+            "taskArn": self.task.taskArn,
+            "networkBindings": []
+        }
+        if self.reason is not None:
+            result["reason"] = self.reason
+        if self.exitCode is not None:
+            result["exitCode"] = self.exitCode
+        return result
+
+    def stop(self, exitCode):
+        self.exitCode = exitCode
+        self.lastStatus = 'STOPPED'
+
+    def fail(self, reason):
+        self.lastStatus = 'STOPPED'
+        self.reason = reason
 
 
 class FakeTask(object):
@@ -18,11 +53,15 @@ class FakeTask(object):
         self.startedBy = startedBy
         self.overrides = overrides
         self.containerInstance = None
+        self.createdAt = time.time()
+        self.startedAt = None
+        self.stoppedAt = None
+        self.containers = []
 
     def to_json(self):
         result = {
             "clusterArn": self.cluster.clusterArn,
-            "containers": [],
+            "containers": [c.to_json() for c in self.containers],
             "desiredStatus": self.desiredStatus,
             "lastStatus": self.lastStatus,
             "overrides": self.overrides,
@@ -30,37 +69,49 @@ class FakeTask(object):
             "taskDefinitionArn": self.taskDefinition.arn,
             "startedBy": self.startedBy,
         }
+        for timestamp in ("createdAt", "startedAt", "stoppedAt"):
+            if getattr(self, timestamp):
+                result[timestamp] = getattr(self, timestamp)
         if self.containerInstance:
             result['containerInstanceArn'] = self.containerInstance.containerInstanceArn
         return result
 
     def assign(self, containerInstance):
         self.lastStatus = 'RUNNING'
+        self.startedAt = time.time()
         self.containerInstance = containerInstance
         self.containerInstance.tasks.append(self)
+        for containerDef in self.taskDefinition.containerDefinitions:
+            self.containers.append(_Container(self, containerDef.get('name')))
 
 
 class Deployment(object):
 
-    def __init__(self):
+    def __init__(self, service, taskDefinition, desiredCount):
+        self.service = service
+        self.taskDefinition = taskDefinition
+        self.desired_count = desiredCount
         self.created_at = 1432829320.611
         self.updated_at = 1432829320.611
-        self.desired_count = 0
-        self.id = "ecs-svc/9223370604025455196"
+        self.id = "ecs-svc/" + str(uuid.uuid4())
         self.pending_count = 0
         self.running_count = 0
         self.status = "PRIMARY"
-        self.task_definition_arn = "arn:aws:ecs:us-west-2:012345678910:task-definition/hpcc-t2-medium:1"
 
     def to_json(self):
+        tasks = self.service.cluster.list_tasks(
+            None, None, None, self.service.serviceName, self.id)
+        running_count = len([t for t in tasks if t.lastStatus == 'RUNNING'])
+        pending_count = len([t for t in tasks if t.lastStatus == 'PENDING'])
+
         return {
             "createdAt": self.created_at,
             "desiredCount": self.desired_count,
             "id": self.id,
-            "pendingCount": self.pending_count,
-            "runningCount": self.running_count,
+            "pendingCount": pending_count,
+            "runningCount": running_count,
             "status": self.status,
-            "taskDefinition": self.task_definition_arn,
+            "taskDefinition": self.taskDefinition.arn,
             "updatedAt": self.updated_at,
         }
 
@@ -73,39 +124,63 @@ class FakeService(object):
         self.taskDefinition = None
         self.desiredCount = 0
         self.serviceArn = "arn:aws:ecs:us-east-1:012345678910:service/{}".format(serviceName)
-        self.deployments = [Deployment()]
+        self.deployments = []
+
+    def _new_deployment(self, taskDefinition, desiredCount):
+        new_deployment = Deployment(self, taskDefinition, desiredCount)
+        if self.deployments:
+            current_deployment = self.deployments[-1]
+            self.shut_down_deployment(current_deployment)
+        self.deployments.append(new_deployment)
+
+    def shut_down_deployment(self, deployment):
+        tasks = self.cluster.list_tasks(
+            None, None, None, self.serviceName, deployment.id)
+        for task in tasks:
+            task.desiredStatus = task.lastStatus = 'STOPPED'
+            task.stoppedAt = time.time()
+        deployment.status = 'INACTIVE'
+
+    def ensure_desired_count(self, deployment):
+        tasks = self.cluster.list_tasks(
+            None, None, None, self.serviceName, deployment.id)
+        count = deployment.desired_count - len(tasks)
+        if count > 0:
+            self.cluster.run_tasks(
+                count, {}, deployment.id, self.taskDefinition, self)
+        elif count < 0:
+            while count < 0:
+                task = tasks.pop(0)
+                task.desiredStatus = task.lastStatus = 'STOPPED'
+                task.stoppedAt = time.time()
+                count += 1
 
     def update(self, taskDefinition, desiredCount):
         if taskDefinition is not None:
+            if taskDefinition != self.taskDefinition:
+                self._new_deployment(taskDefinition, desiredCount or self.desiredCount)
             self.taskDefinition = taskDefinition
         if desiredCount is not None:
             self.desiredCount = desiredCount
+            self.deployments[-1].desired_count = desiredCount
+
         print "UPDATED", self.taskDefinition, self.desiredCount
-
-        # make sure we have enough running or not running tasks
-        tasks = self.cluster.list_tasks(
-            None, 'RUNNING', None, self.serviceName)
-
-        # stop tasks
-        while len(tasks) > self.desiredCount:
-            task = tasks.pop(0)
-            task.desiredStatus = task.lastStatus = 'STOPPED'
-
-        # start tasks
-        if len(tasks) < self.desiredCount:
-            count = self.desiredCount - len(tasks)
-            self.cluster.run_tasks(count, {}, 'startedBy', self.taskDefinition,
-                                   self)
+        self.ensure_desired_count(self.deployments[-1])
 
     def to_json(self):
+        # make sure we have enough running or not running tasks
+        tasks = self.cluster.list_tasks(None, None, None, self.serviceName)
+        running_count = len([t for t in tasks if t.lastStatus == 'RUNNING'])
+        pending_count = len([t for t in tasks if t.lastStatus == 'PENDING'])
+
         return {
             "clusterArn": self.cluster.clusterArn,
             "desiredCount": self.desiredCount,
             "loadBalancers": [],
             "deployments": [d.to_json() for d in self.deployments],
             "events": [],
-            "runningCount": 0,
-            "pendingCount": 0,
+            "runningCount": running_count,
+            "pendingCount": pending_count,
             "serviceName": self.serviceName,
             "serviceArn": self.serviceArn,
             "status": "ACTIVE",
@@ -117,6 +192,7 @@ class FakeContainerInstance(object):
 
     RESOURCES = {
         "t2.micro": (1024, 1024),
+        "m1.small": (1024, 1700),
     }
 
     def __init__(self, instance):
@@ -200,6 +276,7 @@ class FakeCluster(object):
 
         :type instance: `moto.ec2.models.Instance`
         """
+        print "REGISTER", instance
         self.instances.append(FakeContainerInstance(instance))
 
     def list_container_instances(self):
@@ -240,8 +317,11 @@ class FakeCluster(object):
         required_cpu, required_memory = task.taskDefinition.consumes()
         for instance in self.instances:
             remaining_cpu, remaining_memory = instance.remainingResources()
+            print instance.ec2Instance, "required", required_cpu, required_memory, "remaining", remaining_cpu, remaining_memory
             if (remaining_cpu >= required_cpu and remaining_memory >= required_memory):
                 task.assign(instance)
+                break
+        print "DONE ASSIGN"
 
     def run_tasks(self, count, overrides, startedBy, taskDefinition,
                   service=None):
@@ -252,13 +332,17 @@ class FakeCluster(object):
             self.schedule(task)
 
     def list_tasks(self, containerInstance, desiredStatus, family,
-                   serviceName):
+                   serviceName, startedBy=None):
         tasks = self.tasks[:]
         if containerInstance:
             pass
         if desiredStatus:
             tasks = filter(
                 lambda task: task.desiredStatus == desiredStatus,
+                tasks)
+        else:
+            tasks = filter(
+                lambda task: task.desiredStatus != 'STOPPED',
                 tasks)
         if family:
             tasks = filter(
@@ -267,6 +351,10 @@ class FakeCluster(object):
         if serviceName:
             tasks = filter(
                 lambda task: task.service and task.service.serviceName == serviceName,
+                tasks)
+        if startedBy:
+            tasks = filter(
+                lambda task: task.startedBy == startedBy,
                 tasks)
         return tasks
 
@@ -362,7 +450,6 @@ class EC2ContainerServiceBackend(BaseBackend):
         return cluster.describe_container_instances(containerInstanceArns)
 
     def register_task_definition(self, family, containerDefinitions, volumes):
-        print "REGISTER"
         taskDefinition = TaskDefinition(family, containerDefinitions, volumes)
         self.taskDefinitions.append(taskDefinition)
         return taskDefinition
