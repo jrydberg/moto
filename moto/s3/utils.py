@@ -27,6 +27,12 @@ def bucket_name_from_url(url):
             return None
 
 
+def bucket_name_from_path(url):
+    path = urlparse(url).path
+    bucket_name = path.split('/', 2)[1]
+    return bucket_name
+
+
 def metadata_from_headers(headers):
     metadata = {}
     meta_regex = re.compile('^x-amz-meta-([a-zA-Z0-9\-_]+)$', flags=re.IGNORECASE)

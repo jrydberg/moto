@@ -9,7 +9,7 @@ from moto.core.responses import _TemplateEnvironmentMixin
 
 from .exceptions import BucketAlreadyExists, S3ClientError, InvalidPartOrder
 from .models import s3_backend
-from .utils import bucket_name_from_url, metadata_from_headers
+from .utils import bucket_name_from_url, metadata_from_headers, bucket_name_from_path
 from xml.dom import minidom
 
 REGION_URL_REGEX = r'\.s3-(.+?)\.amazonaws\.com'
@@ -18,6 +18,10 @@ DEFAULT_REGION_NAME = 'us-east-1'
 
 def parse_key_name(pth):
     return pth.lstrip("/")
+
+
+def parse_key_name_with_bucket_name(pth):
+    return pth.split('/', 2)[2]
 
 
 class ResponseObject(_TemplateEnvironmentMixin):
@@ -427,7 +431,8 @@ class ResponseObject(_TemplateEnvironmentMixin):
         else:
             raise NotImplementedError("Method POST had only been implemented for multipart uploads and restore operations, so far")
 
-S3ResponseInstance = ResponseObject(s3_backend, bucket_name_from_url, parse_key_name)
+S3DNSCompatibleResponseInstance = ResponseObject(s3_backend, bucket_name_from_url, parse_key_name)
+S3DNonNSCompatibleResponseInstance = ResponseObject(s3_backend, bucket_name_from_path, parse_key_name_with_bucket_name)
 
 S3_ALL_BUCKETS = """<ListAllMyBucketsResult xmlns="http://s3.amazonaws.com/doc/2006-03-01">
   <Owner>

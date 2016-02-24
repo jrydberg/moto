@@ -199,6 +199,20 @@ class S3Backend(BaseBackend):
     def __init__(self):
         self.buckets = {}
 
+    @property
+    def urls(self):
+        from .responses import (S3DNSCompatibleResponseInstance,
+                                S3DNonNSCompatibleResponseInstance)
+        from .urls import (DNS_COMPATIBLE_BASE_URL,
+                           NON_DNS_COMPATIBLE_BASE_URL)
+        urls = {
+            "{}/$".format(DNS_COMPATIBLE_BASE_URL): S3DNSCompatibleResponseInstance.bucket_response,
+            "{}/(?P<key_name>.+)".format(DNS_COMPATIBLE_BASE_URL): S3DNSCompatibleResponseInstance.key_response,
+            "{}/(?P<bucket_name>[^/]+)".format(NON_DNS_COMPATIBLE_BASE_URL): S3DNonNSCompatibleResponseInstance.bucket_response,
+            "{}/(?P<bucket_name>[^/]+)/(?P<key_name>.+)".format(NON_DNS_COMPATIBLE_BASE_URL): S3DNonNSCompatibleResponseInstance.key_response,
+            }
+        return urls
+
     def create_bucket(self, bucket_name, region_name):
         if bucket_name in self.buckets:
             raise BucketAlreadyExists(bucket=bucket_name)
