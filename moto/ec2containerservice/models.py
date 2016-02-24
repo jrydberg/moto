@@ -393,13 +393,25 @@ class FakeCluster(object):
         return failures, tasks
 
     def to_json(self):
+        runningTasksCount = len([
+            task
+            for instance in self.instances
+            for task in instance.tasks
+            if task.lastStatus == 'RUNNING'
+        ])
+        pendingTasksCount = len([
+            task
+            for instance in self.instances
+            for task in instance.tasks
+            if task.lastStatus == 'PENDING'
+        ])
         return {
             "activeServicesCount": len(self.services),
             "clusterArn": self.clusterArn,
             "clusterName": self.clusterName,
-            "pendingTasksCount": self.pendingTasksCount,
-            "runningTasksCount": self.runningTasksCount,
-            "registeredContainerInstancesCount": self.registeredContainerInstancesCount,
+            "pendingTasksCount": pendingTasksCount,
+            "runningTasksCount": runningTasksCount,
+            "registeredContainerInstancesCount": len(self.instances),
             "status": self.status
             }
 
