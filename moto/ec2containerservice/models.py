@@ -125,6 +125,14 @@ class FakeService(object):
         self.desiredCount = 0
         self.serviceArn = "arn:aws:ecs:us-east-1:012345678910:service/{}".format(serviceName)
         self.deployments = []
+        self.events = []
+
+    def emit(self, message):
+        self.events.insert(0, {
+            "createdAt": time.time(),
+            "message": "(service {}) {}".format(self.serviceName, message),
+            "id": str(uuid.uuid4())
+        })
 
     def _new_deployment(self, taskDefinition, desiredCount):
         new_deployment = Deployment(self, taskDefinition, desiredCount)
@@ -141,6 +149,11 @@ class FakeService(object):
             task.stoppedAt = time.time()
         deployment.status = 'INACTIVE'
 
+    @property
+    def _tasks(self):
+        return self.cluster.list_tasks(
+            None, None, None, self.serviceName, deployment.id)
+
     def ensure_desired_count(self, deployment):
         tasks = self.cluster.list_tasks(
             None, None, None, self.serviceName, deployment.id)
@@ -154,6 +167,12 @@ class FakeService(object):
                 task.desiredStatus = task.lastStatus = 'STOPPED'
                 task.stoppedAt = time.time()
                 count += 1
+        # check if we have reached steady state
+        tasks = self.cluster.list_tasks(
+            None, None, None, self.serviceName, deployment.id)
+        count = deployment.desired_count - len(tasks)
+        if count == 0:
+            self.emit("has reached a steady state.")
 
     def update(self, taskDefinition, desiredCount):
         if taskDefinition is not None:
@@ -178,7 +197,7 @@ class FakeService(object):
             "desiredCount": self.desiredCount,
             "loadBalancers": [],
             "deployments": [d.to_json() for d in self.deployments],
-            "events": [],
+            "events": self.events,
             "runningCount": running_count,
             "pendingCount": pending_count,
             "serviceName": self.serviceName,
