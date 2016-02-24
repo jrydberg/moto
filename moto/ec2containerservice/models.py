@@ -511,7 +511,6 @@ class EC2ContainerServiceBackend(BaseBackend):
 
     def update_service(self, cluster, service, taskDefinition, desiredCount):
         cluster = self._get_cluster(cluster)
-        print "UPDATE", taskDefinition
         taskDefinition = self._get_task_definition(taskDefinition)
         return cluster.update_service(service, taskDefinition, desiredCount)
 
