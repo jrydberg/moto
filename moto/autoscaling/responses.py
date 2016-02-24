@@ -11,8 +11,13 @@ class AutoScalingResponse(BaseResponse):
         return autoscaling_backends[self.region]
 
     def attach_load_balancers(self):
-        template = self.response_template(ATTACH_LOEAD_BALANCERS_TEMPLATE)
+        template = self.response_template(ATTACH_LOAD_BALANCERS_TEMPLATE)
         return template.render()
+
+    def detach_load_balancers(self):
+        template = self.response_template(DETACH_LOAD_BALANCERS_TEMPLATE)
+        return template.render()
+
 
     def create_launch_configuration(self):
         instance_monitoring_string = self._get_param('InstanceMonitoring.Enabled')
@@ -387,7 +392,7 @@ DELETE_POLICY_TEMPLATE = """<DeleteScalingPolicyResponse xmlns="http://autoscali
   </ResponseMetadata>
 </DeleteScalingPolicyResponse>"""
 
-ATTACH_LOEAD_BALANCERS_TEMPLATE = """<AttachLoadBalancersResponse xmlns="http://autoscaling.amazonaws.com/doc/2011-01-01/">
+ATTACH_LOAD_BALANCERS_TEMPLATE = """<AttachLoadBalancersResponse xmlns="http://autoscaling.amazonaws.com/doc/2011-01-01/">
   <AttachLoadBalancersResult>
   </AttachLoadBalancersResult>
 
@@ -395,3 +400,12 @@ ATTACH_LOEAD_BALANCERS_TEMPLATE = """<AttachLoadBalancersResponse xmlns="http://
     <RequestId>adafead0-ab8a-11e2-ba13-ab0ccEXAMPLE</RequestId>
   </ResponseMetadata>
 </AttachLoadBalancersResponse>"""
+
+DETACH_LOAD_BALANCERS_TEMPLATE = """<DetachLoadBalancersResponse xmlns="http://autoscaling.amazonaws.com/doc/2011-01-01/">
+  <DetachLoadBalancersResult>
+  </DetachLoadBalancersResult>
+
+  <ResponseMetadata>
+    <RequestId>adafead0-ab8a-11e2-ba13-ab0ccEXAMPLE</RequestId>
+  </ResponseMetadata>
+</DetachLoadBalancersResponse>"""
