@@ -441,6 +441,19 @@ class EC2ContainerServiceBackend(BaseBackend):
         self.clusters.append(cluster)
         return cluster
 
+    def describe_clusters(self, cluster_names):
+        failures, clusters = [], []
+        for name in cluster_names:
+            cluster = self._get_cluster(name)
+            if cluster is None:
+                failures.append({
+                    "arn": name,
+                    "reason": "MISSING"
+                })
+            else:
+                clusters.append(cluster)
+        return failures, clusters
+
     def list_container_instances(self, cluster):
         cluster = self._get_cluster(cluster)
         return cluster.list_container_instances()

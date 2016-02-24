@@ -22,6 +22,14 @@ class EC2ContainerServiceResponse(BaseResponse):
         cluster = self._backend.create_cluster(self.param('clusterName'))
         return self.respond({"cluster": cluster.to_json()})
 
+    def describe_clusters(self):
+        failures, clusters = self._backend.describe_clusters(
+            self.param("clusters"))
+        return self.respond({
+            "failures": failures,
+            "clusters": [cluster.to_json() for cluster in clusters]
+        })
+
     def list_container_instances(self):
         instances = self._backend.list_container_instances(self.param("cluster"))
         return self.respond({"containerInstanceArns": [
